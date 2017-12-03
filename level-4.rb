@@ -1,4 +1,4 @@
-def parse_data(*data)
+def parse_data(data)
   (0..(data[2].to_i*2)+3).each{|el| data[el] = data[el].to_i}
   [data[0],data[1],data[2], data[3..(data[2]*2)+2].each_slice(2).to_a, data[(data[2]*2)+3], data[(data[2]*2)+4..-1]]
 end
@@ -69,12 +69,12 @@ def new_poz_by_old(board, coords, move, color)
     when 'W' then [coords[0],coords[1]-1]
     else [-1,-1]
   end
-  return {status: -1} if move_to[0] < 0 || move_to[1] < 0 || move_to[0] >= rows || move_to[1] >= cols || (board[move_to[0]][move_to[1]] != nil && board[move_to[0]][move_to[1]] != color)
+  return {status: -1} if move_to[0] < 0 || move_to[1] < 0 || move_to[0] >= rows || move_to[1] >= cols || (board[move_to[0]][move_to[1]] != ' ' && board[move_to[0]][move_to[1]] != color)
 
   if board[move_to[0]][move_to[1]] == color
     return {status: 1, board: board, current_poz: [move_to[0],move_to[1]]}
   else
-    board[move_to[0]][move_to[1]] = -1
+    board[move_to[0]][move_to[1]] = 0
     return {status: 0, board: board, current_poz: [move_to[0],move_to[1]]}
   end
 end
@@ -91,7 +91,7 @@ def apply_moves(board, start_coords, moves, color)
     when 1
       if res[:current_poz] == start_coords
         return [-1, i+1]
-      elsif
+      elsif i != moves.size-1
         old_board = res[:board]
         old_coords = res[:current_poz]
       else
@@ -104,25 +104,35 @@ def apply_moves(board, start_coords, moves, color)
       return [-1, i+1] if i == moves.size-1
     end
   end
-
 end
 
-rows, cols, size, points_with_color, num_of_paths, paths = parse_data(*ARGV)
+p 'start'
+data = ''
+File.open('level4/level4-5.in').each do |line|
+  data << line
+end
+rows, cols, size, points_with_color, num_of_paths, paths = parse_data(data.split(" "))
 last_in_rows = Array.new(rows+1){|index| (index)*cols }.push(0)
 coords_with_color = calc_points_poz_with_color(points_with_color, last_in_rows)
 distances_by_color = calc_distances_by_color(coords_with_color)
 result = []
 
+p 'start joins'
+
 joined_paths = join_paths(num_of_paths, paths)
 
-play_board = apply_points(coords_with_color, Array.new(rows){Array.new(cols)})
+play_board = apply_points(coords_with_color, Array.new(rows){Array.new(cols, ' ')})
 
 joined_paths.each do |path|
+  board = play_board.map(&:clone)
   start_coords = poz_of_point(path[:start_poz],last_in_rows)
   start_coords[0], start_coords[1] = start_coords[0]-1, start_coords[1]-1
-  res = apply_moves(play_board, start_coords, path[:steps], path[:color])
+  res = apply_moves(board, start_coords, path[:steps], path[:color])
 
-  result << [res[0], res[1]]
+  play_board = res[2] if res[0] == 1
 end
 
-p as_str(result)
+p 'file write'
+
+
+File.open('test.txt','w'){ |f| f << play_board.map{ |row| row.map{|cell| cell == ' ' ? ' ' : '*'}.join('') }.join("\n") }
