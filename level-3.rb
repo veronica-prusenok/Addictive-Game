@@ -1,8 +1,10 @@
 def parse_data(*data)
+  (0..(data[2].to_i*2)+3).each{|el| data[el] = data[el].to_i}
   [data[0],data[1],data[2], data[3..(data[2]*2)+2].each_slice(2).to_a, data[(data[2]*2)+3], data[(data[2]*2)+4..-1]]
 end
 
-def poz_of_point(point, last_in_rows)
+def poz_of_point(point, last_in_rows= nil, rows= nil, cols= nil)
+  last_in_rows ||= Array.new(rows+1){|index| (index)*cols }.push(0)
   x, y = 0, 0
 
   last_in_rows.each_with_index do |last_in_row, i|
@@ -43,8 +45,18 @@ def as_str(arr)
   arr.join(', ').gsub(',', '')
 end
 
-rows, cols, size, points_with_color, num_of_paths, paths = parse_data(*ARGV.map(&:to_i))
+def join_paths(num_of_paths, paths)
+  join_paths = Array.new(num_of_paths){Hash.new(4)}
+  join_paths.each do |path|
+    path[:color] = paths.slice!(0).to_i
+    path[:start_poz] = paths.slice!(0).to_i
+    path[:length] = paths.slice!(0).to_i
+    path[:steps] = paths.slice!(0, path[2])
+  end
+end
+
+rows, cols, size, points_with_color, num_of_paths, paths = parse_data(*ARGV)
 coords_with_color = calc_points_poz_with_color(rows, cols, points_with_color)
 distances_by_color = calc_distances_by_color(coords_with_color)
 
-p as_str(distances_by_color)
+joined_paths = join_paths(num_of_paths, paths)
