@@ -72,7 +72,7 @@ def new_poz_by_old(board, coords, move, color)
   return {status: -1} if move_to[0] < 0 || move_to[1] < 0 || move_to[0] >= rows || move_to[1] >= cols || (board[move_to[0]][move_to[1]] != nil && board[move_to[0]][move_to[1]] != color)
 
   if board[move_to[0]][move_to[1]] == color
-    return {status: 1, board: board}
+    return {status: 1, board: board, current_poz: [move_to[0],move_to[1]]}
   else
     board[move_to[0]][move_to[1]] = -1
     return {status: 0, board: board, current_poz: [move_to[0],move_to[1]]}
@@ -89,10 +89,19 @@ def apply_moves(board, start_coords, moves, color)
     when -1
       return [-1, i+1]
     when 1
-      return [1, i+1, res[:board]]
+      if res[:current_poz] == start_coords
+        return [-1, i+1]
+      elsif
+        old_board = res[:board]
+        old_coords = res[:current_poz]
+      else
+        return [1, i+1, res[:board]]
+      end
     when 0
       old_board = res[:board]
       old_coords = res[:current_poz]
+
+      return [-1, i+1] if i == moves.size-1
     end
   end
 
@@ -102,16 +111,18 @@ rows, cols, size, points_with_color, num_of_paths, paths = parse_data(*ARGV)
 last_in_rows = Array.new(rows+1){|index| (index)*cols }.push(0)
 coords_with_color = calc_points_poz_with_color(points_with_color, last_in_rows)
 distances_by_color = calc_distances_by_color(coords_with_color)
+result = []
 
 joined_paths = join_paths(num_of_paths, paths)
 
 play_board = apply_points(coords_with_color, Array.new(rows){Array.new(cols)})
 
-p play_board
-
 joined_paths.each do |path|
   start_coords = poz_of_point(path[:start_poz],last_in_rows)
   start_coords[0], start_coords[1] = start_coords[0]-1, start_coords[1]-1
+  res = apply_moves(play_board, start_coords, path[:steps], path[:color])
 
-  p result = apply_moves(play_board, start_coords, path[:steps], path[:color])
+  result << [res[0], res[1]]
 end
+
+p as_str(result)
