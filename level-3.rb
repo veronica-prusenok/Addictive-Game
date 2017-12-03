@@ -51,8 +51,15 @@ def join_paths(num_of_paths, paths)
     path[:color] = paths.slice!(0).to_i
     path[:start_poz] = paths.slice!(0).to_i
     path[:length] = paths.slice!(0).to_i
-    path[:steps] = paths.slice!(0, path[2])
+    path[:steps] = paths.slice!(0, path[:length])
   end
+end
+
+def apply_points(points, board)
+  points.each do |point|
+    board[point[0]-1][point[1]-1] = point[2]
+  end
+  board
 end
 
 rows, cols, size, points_with_color, num_of_paths, paths = parse_data(*ARGV)
@@ -60,3 +67,11 @@ coords_with_color = calc_points_poz_with_color(rows, cols, points_with_color)
 distances_by_color = calc_distances_by_color(coords_with_color)
 
 joined_paths = join_paths(num_of_paths, paths)
+
+play_board = apply_points(coords_with_color, Array.new(rows){Array.new(cols)})
+
+p play_board
+
+joined_paths.each do |path|
+  p path
+end
