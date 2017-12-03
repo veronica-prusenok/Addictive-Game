@@ -1,5 +1,5 @@
 def parse_data(*data)
-  [data[0],data[1],data[2], data[3..-1].each_slice(2).to_a]
+  [data[0],data[1],data[2], data[3..(data[2]*2)+2].each_slice(2).to_a, data[(data[2]*2)+3], data[(data[2]*2)+4..-1]]
 end
 
 def poz_of_point(point, last_in_rows)
@@ -43,9 +43,8 @@ def as_str(arr)
   arr.join(', ').gsub(',', '')
 end
 
-rows, cols, size, points_with_color = parse_data(*ARGV.map(&:to_i))
+rows, cols, size, points_with_color, num_of_paths, paths = parse_data(*ARGV.map(&:to_i))
 coords_with_color = calc_points_poz_with_color(rows, cols, points_with_color)
-result_arr = calc_distances_by_color(coords_with_color)
+distances_by_color = calc_distances_by_color(coords_with_color)
 
-
-p as_str(result_arr)
+p as_str(distances_by_color)
