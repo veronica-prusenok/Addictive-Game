@@ -1,6 +1,7 @@
 def parse_data(data)
   (0..(data[2].to_i*2)+3).each{|el| data[el] = data[el].to_i}
-  [data[0],data[1],data[2], data[3..(data[2]*2)+2].each_slice(2).to_a, data[(data[2]*2)+3], data[(data[2]*2)+4..-1]]
+  points_x_2 = data[2]*2
+  [data[0],data[1],data[2],data[3..points_x_2+2].each_slice(2).to_a, data[points_x_2+3], data[points_x_2+4..-1]]
 end
 
 def poz_of_point(point, width)
@@ -45,6 +46,7 @@ def join_paths(num_of_paths, paths)
     path[:length] = paths.slice!(0).to_i
     path[:steps] = paths.slice!(0, path[:length])
   end
+  [join_paths, paths]
 end
 
 def apply_points(points, board)
@@ -102,34 +104,47 @@ end
 
 p 'start'
 data = ''
-File.open('level4/level4-5.in').each do |line|
+File.open('level5/level5-1.in').each do |line|
   data << line
 end
-rows, cols, size, points_with_color, num_of_paths, paths = parse_data(data.split(" "))
-coords_with_color = calc_points_poz_with_color(points_with_color, cols)
-distances_by_color = calc_distances_by_color(coords_with_color)
-result = []
+data = data.split(" ")
+tests_num = data.slice!(0).to_i
+rest = data
 
-p 'start joins'
+tests = {}
 
-joined_paths = join_paths(num_of_paths, paths)
-
-p 'start board'
-
-play_board = apply_points(coords_with_color, Array.new(rows){Array.new(cols, ' ')})
-
-p 'start paths'
-
-joined_paths.each do |path|
-  board = play_board.map(&:clone)
-  start_coords = poz_of_point(path[:start_poz], cols)
-  start_coords[0], start_coords[1] = start_coords[0]-1, start_coords[1]-1
-  res = apply_moves(board, start_coords, path[:steps], path[:color])
-
-  play_board = res[2] if res[0] == 1
+tests_num.times do |i|
+  parsed_data = parse_data(rest)
+  joined_paths, rest = join_paths(parsed_data[4], parsed_data[5])
+  tests[:"test#{i+1}"] = {
+    rows: parsed_data[0],
+    cols: parsed_data[1],
+    size: parsed_data[2],
+    points_with_color: parsed_data[3],
+    joined_paths: joined_paths,
+  }
 end
+p tests
 
-p 'file write'
+# coords_with_color = calc_points_poz_with_color(points_with_color, cols)
+# distances_by_color = calc_distances_by_color(coords_with_color)
 
-
-File.open('test.txt','w'){ |f| f << play_board.map{ |row| row.map{|cell| cell == ' ' ? ' ' : '*'}.join('') }.join("\n") }
+# p 'start board'
+#
+# play_board = apply_points(coords_with_color, Array.new(rows){Array.new(cols, ' ')})
+#
+# p 'start paths'
+#
+# joined_paths.each do |path|
+#   board = play_board.map(&:clone)
+#   start_coords = poz_of_point(path[:start_poz], cols)
+#   start_coords[0], start_coords[1] = start_coords[0]-1, start_coords[1]-1
+#   res = apply_moves(board, start_coords, path[:steps], path[:color])
+#
+#   play_board = res[2] if res[0] == 1
+# end
+#
+# p 'file write'
+#
+#
+# File.open('test.txt','w'){ |f| f << play_board.map{ |row| row.map{|cell| cell == ' ' ? ' ' : '*'}.join('') }.join("\n") }
