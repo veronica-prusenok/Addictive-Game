@@ -3,22 +3,16 @@ def parse_data(data)
   [data[0],data[1],data[2], data[3..(data[2]*2)+2].each_slice(2).to_a, data[(data[2]*2)+3], data[(data[2]*2)+4..-1]]
 end
 
-def poz_of_point(point, last_in_rows)
-  x, y = 0, 0
-
-  last_in_rows.each_with_index do |last_in_row, i|
-    if i != last_in_rows.size-1 && point.between?(last_in_row+1, last_in_rows[i+1])
-      x = i+1
-      y = (((last_in_rows[i]+1)..last_in_rows[i+1]).to_a.index(point)) + 1
-    end
-  end
-  [x,y]
+def poz_of_point(point, width)
+  i = point - 1
+  x, y = i / width, i % width
+  [x+1,y+1]
 end
 
-def calc_points_poz_with_color(arr, last_in_rows)
+def calc_points_poz_with_color(arr,width)
   temp = []
   arr.each do |point|
-    temp << poz_of_point(point[0], last_in_rows) + [point[1]]
+    temp << poz_of_point(point[0], width) + [point[1]]
   end
   temp
 end
@@ -112,8 +106,7 @@ File.open('level4/level4-5.in').each do |line|
   data << line
 end
 rows, cols, size, points_with_color, num_of_paths, paths = parse_data(data.split(" "))
-last_in_rows = Array.new(rows+1){|index| (index)*cols }.push(0)
-coords_with_color = calc_points_poz_with_color(points_with_color, last_in_rows)
+coords_with_color = calc_points_poz_with_color(points_with_color, cols)
 distances_by_color = calc_distances_by_color(coords_with_color)
 result = []
 
@@ -121,11 +114,15 @@ p 'start joins'
 
 joined_paths = join_paths(num_of_paths, paths)
 
+p 'start board'
+
 play_board = apply_points(coords_with_color, Array.new(rows){Array.new(cols, ' ')})
+
+p 'start paths'
 
 joined_paths.each do |path|
   board = play_board.map(&:clone)
-  start_coords = poz_of_point(path[:start_poz],last_in_rows)
+  start_coords = poz_of_point(path[:start_poz], cols)
   start_coords[0], start_coords[1] = start_coords[0]-1, start_coords[1]-1
   res = apply_moves(board, start_coords, path[:steps], path[:color])
 
