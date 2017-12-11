@@ -102,14 +102,26 @@ def apply_moves(board, start_coords, moves, color)
   end
 end
 
-p 'start'
+def apply_paths(play_board, joined_paths, cols)
+  joined_paths.each do |path|
+    board = play_board.map(&:clone)
+    start_coords = poz_of_point(path[:start_poz], cols)
+    start_coords[0], start_coords[1] = start_coords[0]-1, start_coords[1]-1
+    result = apply_moves(board, start_coords, path[:steps], path[:color])
+
+    play_board = result[2] if result[0] == 1
+  end
+  play_board
+end
+
 data = ''
-File.open('level5/level5-1.in').each do |line|
+File.open('level5/level5-2.in').each do |line|
   data << line
 end
 data = data.split(" ")
 tests_num = data.slice!(0).to_i
 rest = data
+result = []
 
 tests = {}
 
@@ -123,28 +135,46 @@ tests_num.times do |i|
     points_with_color: parsed_data[3],
     joined_paths: joined_paths,
   }
+  result << Array.new(parsed_data[2]/2)
 end
-p tests
 
-# coords_with_color = calc_points_poz_with_color(points_with_color, cols)
-# distances_by_color = calc_distances_by_color(coords_with_color)
+tests.each_with_index do |(key,data),index|
+  coords_with_color = calc_points_poz_with_color(data[:points_with_color], data[:cols])
+  play_board = apply_points(coords_with_color, Array.new(data[:rows]){Array.new(data[:cols], ' ')})
+  play_board = apply_paths(play_board, data[:joined_paths], data[:cols])
 
-# p 'start board'
-#
-# play_board = apply_points(coords_with_color, Array.new(rows){Array.new(cols, ' ')})
-#
-# p 'start paths'
-#
-# joined_paths.each do |path|
-#   board = play_board.map(&:clone)
-#   start_coords = poz_of_point(path[:start_poz], cols)
-#   start_coords[0], start_coords[1] = start_coords[0]-1, start_coords[1]-1
-#   res = apply_moves(board, start_coords, path[:steps], path[:color])
-#
-#   play_board = res[2] if res[0] == 1
-# end
-#
-# p 'file write'
-#
-#
-# File.open('test.txt','w'){ |f| f << play_board.map{ |row| row.map{|cell| cell == ' ' ? ' ' : '*'}.join('') }.join("\n") }
+  colors_to_establish = (1..data[:size]/2).to_a
+  # apply certain values
+  distances_by_color = calc_distances_by_color(coords_with_color)
+  distances_by_color.each_index.select{|i| distances_by_color[i] == 1}.each{|i|
+    result[index][i] = 2
+    colors_to_establish.delete(i+1)
+  }
+  data[:joined_paths].each{|path|
+    result[index][path[:color]-1] = 1
+    colors_to_establish.delete(path[:color])
+  }
+  #all status 2 if holes
+  result[index].map! { |x| x || 2 } if play_board.all?{ |row| row.include?(' ') } && play_board.transpose.all?{ |row| row.include?(' ') }
+  next unless result[index].any?(&:nil?)
+  x, y = play_board.find_index{ |row| !row.include?(' ') }, play_board.transpose.find_index{ |row| !row.include?(' ') }
+  p '+'*111
+  p result[index]
+  p '+'*30
+  play_board.each do |r|
+    puts r.each { |p| p }.join(" ")
+  end
+  p '+'*30
+  p x, y
+  sort_by_color(coords_with_color.select{|coords| colors_to_establish.include?(coords[2])}).each do |points|
+    first, second = points[0].take(2), points[1].take(2)
+    p points
+    if (x.nil? || ((first[0]-1>=x && second[0]-1>=x) || (first[0]-1<=x && second[0]-1<=x))) && (y.nil? || ((first[1]-1>=y && second[1]-1>=y) || (first[1]-1<=y && second[1]-1<=y)))
+      result[index][points[0][2]-1] = 2
+    else
+      result[index][points[0][2]-1] = 3
+    end
+  end
+  p result[index]
+end
+p as_str(result)
