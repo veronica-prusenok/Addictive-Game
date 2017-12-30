@@ -114,8 +114,33 @@ def apply_paths(play_board, joined_paths, cols)
   play_board
 end
 
+def is_connectively?(point1, point2, play_board, color)
+  board = play_board.map(&:clone)
+  rows = board.size
+  cols = board.first.size
+  node_queue = [point1]
+
+  while(node_queue.size != 0)
+    curr_node = node_queue.pop
+
+    return true if board[curr_node[0]][curr_node[1]] == color && curr_node != point1
+    next if board[curr_node[0]][curr_node[1]] != ' ' && board[curr_node[0]][curr_node[1]] != color
+
+    board[curr_node[0]][curr_node[1]] = 0
+
+    children = []
+
+    children << [curr_node[0]-1, curr_node[1]] if curr_node[0]-1 >= 0
+    children << [curr_node[0]+1, curr_node[1]] if curr_node[0]+1 < rows
+    children << [curr_node[0], curr_node[1]-1] if curr_node[1]-1 >= 0
+    children << [curr_node[0], curr_node[1]+1] if curr_node[1]+1 < cols
+
+    node_queue = children + node_queue
+  end
+end
+
 data = ''
-File.open('level5/level5-2.in').each do |line|
+File.open('level5/level5-4.in').each do |line|
   data << line
 end
 data = data.split(" ")
@@ -154,27 +179,20 @@ tests.each_with_index do |(key,data),index|
     result[index][path[:color]-1] = 1
     colors_to_establish.delete(path[:color])
   }
-  #all status 2 if holes
-  result[index].map! { |x| x || 2 } if play_board.all?{ |row| row.include?(' ') } && play_board.transpose.all?{ |row| row.include?(' ') }
+
   next unless result[index].any?(&:nil?)
   x, y = play_board.find_index{ |row| !row.include?(' ') }, play_board.transpose.find_index{ |row| !row.include?(' ') }
-  p '+'*111
-  p result[index]
-  p '+'*30
-  play_board.each do |r|
-    puts r.each { |p| p }.join(" ")
-  end
-  p '+'*30
-  p x, y
+
   sort_by_color(coords_with_color.select{|coords| colors_to_establish.include?(coords[2])}).each do |points|
     first, second = points[0].take(2), points[1].take(2)
-    p points
-    if (x.nil? || ((first[0]-1>=x && second[0]-1>=x) || (first[0]-1<=x && second[0]-1<=x))) && (y.nil? || ((first[1]-1>=y && second[1]-1>=y) || (first[1]-1<=y && second[1]-1<=y)))
+    first, second = [first[0]-1, first[1]-1], [second[0]-1, second[1]-1]
+
+    if (x.nil? || ((first[0]>=x && second[0]>=x) || (first[0]<=x && second[0]<=x))) && (y.nil? || ((first[1]>=y && second[1]>=y) || (first[1]<=y && second[1]<=y))) && is_connectively?(first, second, play_board, points[0][2])
       result[index][points[0][2]-1] = 2
     else
       result[index][points[0][2]-1] = 3
     end
   end
-  p result[index]
 end
+
 p as_str(result)
