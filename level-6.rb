@@ -10,6 +10,10 @@ def poz_of_point(point, width)
   [x+1,y+1]
 end
 
+def point_by_coords(x, y, width)
+  (x * width) + (y % width) + 1
+end
+
 def calc_points_poz_with_color(arr,width)
   temp = []
   arr.each do |point|
@@ -139,6 +143,22 @@ def is_connectively?(point1, point2, play_board, color)
   end
 end
 
+def can_move(board, point, width, color, path_end_points)
+  x,y = poz_of_point(point, width)
+  x,y = x-1, y-1
+
+  variants = []
+  rows = board.size
+  cols = board.first.size
+
+  variants << ['S', [x-1, y]] if x-1 >= 0 && (board[x-1][y] == ' ' || path_end_points.include?([x-1, y]))
+  variants << ['N', [x+1, y]] if x+1 < rows && (board[x+1][y] == ' ' || path_end_points.include?([x+1, y]))
+  variants << ['W', [x, y-1]] if y-1 >= 0 && (board[x][y-1] == ' ' || path_end_points.include?([x, y-1]))
+  variants << ['E', [x, y+1]] if y+1 < cols && (board[x][y+1] == ' ' || path_end_points.include?([x, y+1]))
+
+  variants
+end
+
 data = ''
 File.open('level6/level6-11.in').each do |line|
   data << line
@@ -146,8 +166,7 @@ end
 data = data.split(" ")
 tests_num = data.slice!(0).to_i
 rest = data
-result = []
-
+result = [tests_num]
 tests = {}
 
 tests_num.times do |i|
@@ -160,44 +179,29 @@ tests_num.times do |i|
     points_with_color: parsed_data[3],
     joined_paths: joined_paths,
   }
-  result << Array.new(parsed_data[2]/2)
 end
 
 tests.each_with_index do |(key,data),index|
   coords_with_color = calc_points_poz_with_color(data[:points_with_color], data[:cols])
   play_board = apply_points(coords_with_color, Array.new(data[:rows]){Array.new(data[:cols], ' ')})
   play_board = apply_paths(play_board, data[:joined_paths], data[:cols])
+  paths = []
 
-  colors_to_establish = (1..data[:size]/2).to_a
-  # apply certain values
-  distances_by_color = calc_distances_by_color(coords_with_color)
-  distances_by_color.each_index.select{|i| distances_by_color[i] == 1}.each{|i|
-    result[index][i] = 2
-    colors_to_establish.delete(i+1)
-  }
-  data[:joined_paths].each{|path|
-    result[index][path[:color]-1] = 1
-    colors_to_establish.delete(path[:color])
-  }
+  points_to_check = data[:points_with_color]
+  path_end_points = []
 
-  play_board.each do |row|
-    puts row.each { |p| p }.join(" ")
-  end
-  p '*'*90
-
-  next unless result[index].any?(&:nil?)
-  x, y = play_board.find_index{ |row| !row.include?(' ') }, play_board.transpose.find_index{ |row| !row.include?(' ') }
-
-  sort_by_color(coords_with_color.select{|coords| colors_to_establish.include?(coords[2])}).each do |points|
-    first, second = points[0].take(2), points[1].take(2)
-    first, second = [first[0]-1, first[1]-1], [second[0]-1, second[1]-1]
-
-    if (x.nil? || ((first[0]>=x && second[0]>=x) || (first[0]<=x && second[0]<=x))) && (y.nil? || ((first[1]>=y && second[1]>=y) || (first[1]<=y && second[1]<=y))) && is_connectively?(first, second, play_board, points[0][2])
-      result[index][points[0][2]-1] = 2
-    else
-      result[index][points[0][2]-1] = 3
+  3.times do
+    points_to_check.each do |point, color|
+      possible_moves = can_move(play_board, point, data[:cols], color, path_end_points)
+      if possible_moves.size == 1
+        pos_x, pos_y = possible_moves.first.last
+        points_to_check = points_to_check - [point, color]
+        play_board[pos_x][pos_y] = 0
+        path_end_points << [pos_x, pos_y]
+        points_to_check.push([point_by_coords(pos_x, pos_y, data[:cols]), color])
+        paths << [point, color, possible_moves.first.first]
+      end
     end
   end
+  p paths
 end
-
-p as_str(result)
