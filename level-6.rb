@@ -203,47 +203,47 @@ tests.each_with_index do |(key,data),index|
   play_board = apply_paths(play_board, data[:joined_paths], data[:cols])
   paths = [[-5]]
 
-  points_to_check = data[:points_with_color]
+  points_to_check = data[:points_with_color].map{|point, color| [point,color,point]}
   path_end_points = []
 
   15.times do
     points_to_check = points_to_check.uniq
-    points_to_check.each do |point, color|
+    points_to_check.each do |point, color, parent|
 
       possible_moves = can_move(play_board, point, data[:cols], path_end_points, color, paths)
       pos_x, pos_y = possible_moves.first.last if possible_moves.size == 1
 
       if pos_x && pos_y && play_board[pos_x][pos_y] != color
         pos_x, pos_y = possible_moves.first.last
-        points_to_check = points_to_check - [[point, color]]
+        points_to_check = points_to_check - [[point, color, parent]]
 
         if paths.any?{|path| path.first == color}
           path = paths.select {|path| path.first == color}.first
-          path << [point, possible_moves.first.first] unless path[1..-1].any?{|move| move.first == point}
+          path << [parent, possible_moves.first.first] unless path[1..-1].any?{|move| move.first == parent}
         else
-          paths << [color, [point, possible_moves.first.first]]
+          paths << [color, [parent, possible_moves.first.first]]
         end
 
         play_board[pos_x][pos_y] = 0
         path_end_points = (path_end_points + [[pos_x, pos_y]]).uniq
-        points_to_check.push([point_by_coords(pos_x, pos_y, data[:cols]), color])
+        points_to_check.push([point_by_coords(pos_x, pos_y, data[:cols]), color, parent])
       elsif pos_x && pos_y
         finish_moves = can_finish(play_board, point, data[:cols], path_end_points, color, paths)
         if finish_moves.size == 1
           pos_x, pos_y = finish_moves.first.last
-          points_to_check = points_to_check - [[point, color]]
+          points_to_check = points_to_check - [[point, color, parent]]
 
           if paths.any?{|path| path.first == color}
             path = paths.select {|path| path.first == color}.first
-            path << [point, finish_moves.first.first] unless path[1..-1].any?{|move| move.first == point}
+            path << [parent, finish_moves.first.first]
           else
-            paths << [color, [point, finish_moves.first.first]]
+            paths << [color, [parent, finish_moves.first.first]]
           end
           current_p = poz_of_point(point, data[:cols])
           next_p = point_by_coords(pos_x, pos_y, data[:cols])
 
           path_end_points = (path_end_points - [[pos_x, pos_y]] - [[current_p.first-1, current_p.last-1]]).uniq
-          points_to_check = points_to_check - [[next_p, color]]
+          points_to_check = points_to_check - [[next_p, color, parent]]
         end
       end
     end
