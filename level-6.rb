@@ -143,7 +143,7 @@ def is_connectively?(point1, point2, play_board, color)
   end
 end
 
-def can_move(board, point, width, path_end_points, color, paths)
+def can_move(board, point, width, color, paths)
   x,y = poz_of_point(point, width)
   x,y = x-1, y-1
 
@@ -151,15 +151,15 @@ def can_move(board, point, width, path_end_points, color, paths)
   rows = board.size
   cols = board.first.size
 
-  moves << ['S', [x-1, y]] if x-1 >= 0 && (board[x-1][y] == ' ' || path_end_points.include?([x-1, y]) || (board[x-1][y] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x-1, y, width) } }))
-  moves << ['N', [x+1, y]] if x+1 < rows && (board[x+1][y] == ' ' || path_end_points.include?([x+1, y]) || (board[x+1][y] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x+1, y, width) } }))
-  moves << ['W', [x, y-1]] if y-1 >= 0 && (board[x][y-1] == ' ' || path_end_points.include?([x, y-1]) || (board[x][y-1] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x, y-1, width) } }))
-  moves << ['E', [x, y+1]] if y+1 < cols && (board[x][y+1] == ' ' || path_end_points.include?([x, y+1]) || (board[x][y+1] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x, y+1, width) } }))
+  moves << ['N', [x-1, y]] if x-1 >= 0 && (board[x-1][y] == ' ' || board[x-1][y] == 'o' || (board[x-1][y] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x-1, y, width) } }))
+  moves << ['S', [x+1, y]] if x+1 < rows && (board[x+1][y] == ' ' || board[x+1][y] == 'o' || (board[x+1][y] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x+1, y, width) } }))
+  moves << ['W', [x, y-1]] if y-1 >= 0 && (board[x][y-1] == ' ' || board[x][y-1] == 'o' || (board[x][y-1] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x, y-1, width) } }))
+  moves << ['E', [x, y+1]] if y+1 < cols && (board[x][y+1] == ' ' || board[x][y+1] == 'o' || (board[x][y+1] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x, y+1, width) } }))
 
   moves
 end
 
-def can_finish(board, point, width, path_end_points, color, paths)
+def can_finish(board, point, width, color, paths)
   x,y = poz_of_point(point, width)
   x,y = x-1, y-1
 
@@ -167,10 +167,10 @@ def can_finish(board, point, width, path_end_points, color, paths)
   rows = board.size
   cols = board.first.size
 
-  moves << ['S', [x-1, y]] if x-1 >= 0 && (path_end_points.include?([x-1, y]) || (board[x-1][y] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x-1, y, width) } }))
-  moves << ['N', [x+1, y]] if x+1 < rows && (path_end_points.include?([x+1, y]) || (board[x+1][y] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x+1, y, width) } }))
-  moves << ['W', [x, y-1]] if y-1 >= 0 && (path_end_points.include?([x, y-1]) || (board[x][y-1] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x, y-1, width) } }))
-  moves << ['E', [x, y+1]] if y+1 < cols && (path_end_points.include?([x, y+1]) || (board[x][y+1] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x, y+1, width) } }))
+  moves << ['N', [x-1, y]] if x-1 >= 0 && (board[x-1][y] == 'o' || (board[x-1][y] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x-1, y, width) } }))
+  moves << ['S', [x+1, y]] if x+1 < rows && (board[x+1][y] == 'o' || (board[x+1][y] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x+1, y, width) } }))
+  moves << ['W', [x, y-1]] if y-1 >= 0 && (board[x][y-1] == 'o' || (board[x][y-1] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x, y-1, width) } }))
+  moves << ['E', [x, y+1]] if y+1 < cols && (board[x][y+1] == 'o' || (board[x][y+1] == color && !paths.any?{ |path| path[1..-1].any?{ |move| move.first == point_by_coords(x, y+1, width) } }))
 
   moves
 end
@@ -204,31 +204,37 @@ tests.each_with_index do |(key,data),index|
   paths = [[-5]]
 
   points_to_check = data[:points_with_color].map{|point, color| [point,color,point]}
-  path_end_points = []
 
   15.times do
     points_to_check = points_to_check.uniq
     points_to_check.each do |point, color, parent|
 
-      possible_moves = can_move(play_board, point, data[:cols], path_end_points, color, paths)
+      possible_moves = can_move(play_board, point, data[:cols], color, paths)
       pos_x, pos_y = possible_moves.first.last if possible_moves.size == 1
 
-      if pos_x && pos_y && play_board[pos_x][pos_y] != color
-        pos_x, pos_y = possible_moves.first.last
+      if pos_x && pos_y && play_board[pos_x][pos_y] == ' '
+        new_x, new_y = possible_moves.first
+        move = possible_moves.first.first
+
         points_to_check = points_to_check - [[point, color, parent]]
 
         if paths.any?{|path| path.first == color}
           path = paths.select {|path| path.first == color}.first
-          path << [parent, possible_moves.first.first] unless path[1..-1].any?{|move| move.first == parent}
+          path << [parent, move]
         else
-          paths << [color, [parent, possible_moves.first.first]]
+          paths << [color, [parent, move]]
         end
 
-        play_board[pos_x][pos_y] = 0
-        path_end_points = (path_end_points + [[pos_x, pos_y]]).uniq
+        play_board[pos_x][pos_y] = 'o'
+
+        cur_x, cur_y = poz_of_point(point, data[:cols])
+        cur_x, cur_y = cur_x-1, cur_y-1
+
+        play_board[cur_x][cur_y] = 0 if play_board[cur_x][cur_y] == 'o'
+
         points_to_check.push([point_by_coords(pos_x, pos_y, data[:cols]), color, parent])
-      elsif pos_x && pos_y
-        finish_moves = can_finish(play_board, point, data[:cols], path_end_points, color, paths)
+      elsif pos_x && pos_y && play_board[pos_x][pos_y] == color
+        finish_moves = can_finish(play_board, point, data[:cols], color, paths)
         if finish_moves.size == 1
           pos_x, pos_y = finish_moves.first.last
           points_to_check = points_to_check - [[point, color, parent]]
@@ -239,12 +245,14 @@ tests.each_with_index do |(key,data),index|
           else
             paths << [color, [parent, finish_moves.first.first]]
           end
-          current_p = poz_of_point(point, data[:cols])
+          cur_x, cur_y = poz_of_point(point, data[:cols])
+          cur_x, cur_y = cur_x-1, cur_y-1
           next_p = point_by_coords(pos_x, pos_y, data[:cols])
 
-          path_end_points = (path_end_points - [[pos_x, pos_y]] - [[current_p.first-1, current_p.last-1]]).uniq
-          points_to_check = points_to_check - [[next_p, color, parent]]
+          play_board[cur_x][cur_y] = 0 if play_board[cur_x][cur_y] == 'o'
+          points_to_check = points_to_check - [[next_p, color, next_p]]
         end
+      elsif pos_x && pos_y && play_board[pos_x][pos_y] == 'o'
       end
     end
   end
@@ -253,9 +261,11 @@ end
 
 result_str = tests_num.to_s + ' '
 result.each do |paths|
-  result_str += paths.flatten.count{|x| x.instance_of?(String)}.to_s + ' '
-  p paths
-  p paths.sort_by(&:first)
+  result_str += paths.sort_by(&:first).inject(0){|sum, el| sum + el[1..-1].group_by(&:first).count}.to_s + ' '
+
+  resss = []
+  paths.sort_by(&:first).map{|el| el[1..-1].sort_by(&:first).group_by(&:first).map { |c, xs| resss << el[0]; resss << c; resss << xs.map{|x| x.last.instance_of?(String)}.count; resss << xs.map(&:last) }}
+  result_str += resss.join(', ').gsub(',', '')
 end
 
 p result_str
