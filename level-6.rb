@@ -154,10 +154,10 @@ def can_move(board, point, width, color, paths)
   w = [point_by_coords(x, y-1, width), [x, y-1]]
   e = [point_by_coords(x, y+1, width), [x, y+1]]
 
-  moves << n if x-1 >= 0 && (board[x-1][y] == ' ' || board[x-1][y] == 'o' || (board[x-1][y] == color && !paths.any?{ |path| path.first[:parent] == n.first }))
-  moves << s if x+1 < rows && (board[x+1][y] == ' ' || board[x+1][y] == 'o' || (board[x+1][y] == color && !paths.any?{ |path| path.first[:parent] == s.first }))
-  moves << w if y-1 >= 0 && (board[x][y-1] == ' ' || board[x][y-1] == 'o' || (board[x][y-1] == color && !paths.any?{ |path| path.first[:parent] == w.first }))
-  moves << e if y+1 < cols && (board[x][y+1] == ' ' || board[x][y+1] == 'o' || (board[x][y+1] == color && !paths.any?{ |path| path.first[:parent] == e.first }))
+  moves << n if x-1 >= 0 && (board[x-1][y] == ' ' || (board[x-1][y] == 'o' && paths.any?{ |path| path.first[:color] == color && path.first[:move_to].include?(n.first) }) || (board[x-1][y] == color && !paths.any?{ |path| path.first[:parent] == n.first }))
+  moves << s if x+1 < rows && (board[x+1][y] == ' ' || (board[x+1][y] == 'o' && paths.any?{ |path| path.first[:color] == color && path.first[:move_to].include?(s.first) }) || (board[x+1][y] == color && !paths.any?{ |path| path.first[:parent] == s.first }))
+  moves << w if y-1 >= 0 && (board[x][y-1] == ' ' || (board[x][y-1] == 'o' && paths.any?{ |path| path.first[:color] == color && path.first[:move_to].include?(w.first) }) || (board[x][y-1] == color && !paths.any?{ |path| path.first[:parent] == w.first }))
+  moves << e if y+1 < cols && (board[x][y+1] == ' ' || (board[x][y+1] == 'o' && paths.any?{ |path| path.first[:color] == color && path.first[:move_to].include?(e.first) }) || (board[x][y+1] == color && !paths.any?{ |path| path.first[:parent] == e.first }))
 
   moves
 end
@@ -170,7 +170,7 @@ def move_by_points(point1, point2)
 end
 
 data = ''
-File.open('level6/level6-11.in').each do |line|
+File.open('level6/level6-5.in').each do |line|
   data << line
 end
 data = data.split(" ")
@@ -198,49 +198,54 @@ tests.each_with_index do |(key,data),index|
   paths = []
 
   points_to_check = data[:points_with_color].map{|point, color| [point,color,point]}
+  points_to_check_dup = points_to_check
 
-  15.times do
+
+  1000.times do
     points_to_check = points_to_check.uniq
     points_to_check.each do |point, color, parent|
-      possible_moves = can_move(play_board, point, data[:cols], color, paths)
+      if points_to_check_dup.include?([point, color, parent])
+        possible_moves = can_move(play_board, point, data[:cols], color, paths)
 
-      if possible_moves.size == 1
-        move = possible_moves.first.first
-        new_x, new_y = possible_moves.first.last
-        cur_x, cur_y = poz_of_point(point, data[:cols])
+        if possible_moves.size == 1
+          move = possible_moves.first.first
+          new_x, new_y = possible_moves.first.last
+          cur_x, cur_y = poz_of_point(point, data[:cols])
 
-        points_to_check = points_to_check - [[point, color, parent]]
+          points_to_check_dup -= [[point, color, parent]]
 
-        if paths.any?{|path| path.first[:parent] == parent}
-          paths.select{|path| path.first[:parent] == parent}.first.first[:move_to] << move
-        else
-          paths << [{color: color, parent: parent, move_to: [parent, move]}]
-        end
-        cur_path = paths.select{|path| path.first[:parent] == parent}.first.first
-        play_board[cur_x][cur_y] = 0 if play_board[cur_x][cur_y] == 'o'
-
-        if play_board[new_x][new_y] == ' '
-          points_to_check << [move, color, parent]
-          play_board[new_x][new_y] = 'o'
-        elsif play_board[new_x][new_y] == color
-          if move < parent
-            cur_path[:parent] = move
-            cur_path[:move_to].reverse!
-          end
-          points_to_check = points_to_check - [[move, color, parent]]
-        elsif play_board[new_x][new_y] == 'o'
-          cross_path = paths.select{|path| path.first[:move_to].include?(move)}.first.first
-          play_board[new_x][new_y] = 0 if play_board[new_x][new_y] == 'o'
-          if cross_path[:color] == color
-            if cross_path[:parent] < parent
-              cross_path[:move_to] = cross_path[:move_to] - [move] + cur_path[:move_to].reverse
-              paths -= [[cur_path]]
+          if play_board[new_x][new_y] != 'o' || paths.any?{|path| path.first[:move_to].include?(move)}
+            if paths.any?{|path| path.first[:parent] == parent}
+              paths.select{|path| path.first[:parent] == parent}.first.first[:move_to] << move
             else
-              cur_path[:move_to] = cur_path[:move_to] - [move] + cross_path[:move_to].reverse
-              paths -= [[cross_path]]
+              paths << [{color: color, parent: parent, move_to: [parent, move]}]
             end
-            points_to_check -= [[move, color, cross_path[:parent]]]
+            cur_path = paths.select{|path| path.first[:parent] == parent}.first.first
+            play_board[cur_x][cur_y] = 0 if play_board[cur_x][cur_y] == 'o'
+
+            if play_board[new_x][new_y] == ' '
+              points_to_check_dup << [move, color, parent]
+              play_board[new_x][new_y] = 'o'
+            elsif play_board[new_x][new_y] == color
+              if move < parent
+                cur_path[:parent] = move
+                cur_path[:move_to].reverse!
+              end
+              points_to_check_dup -= [[move, color, move]]
+            elsif play_board[new_x][new_y] == 'o'
+              cross_path = paths.select{|path| path.first[:move_to].include?(move) && path.first[:parent] != parent}.first.first
+              play_board[new_x][new_y] = 0 if play_board[new_x][new_y] == 'o'
+              if cross_path[:parent] < parent
+                cross_path[:move_to] = cross_path[:move_to] - [move] + cur_path[:move_to].reverse
+                paths -= [[cur_path]]
+              else
+                cur_path[:move_to] = cur_path[:move_to] - [move] + cross_path[:move_to].reverse
+                paths -= [[cross_path]]
+              end
+              points_to_check_dup.each{|point_to_check| points_to_check_dup -= [point_to_check] if point_to_check.last == cross_path[:parent] || point_to_check.last == parent }
+            end
           end
+          points_to_check = points_to_check_dup
         end
       end
     end
@@ -248,9 +253,9 @@ tests.each_with_index do |(key,data),index|
   result[index] = paths
 end
 
-result_str = tests_num.to_s + ' '
+result_str = tests_num.to_s
 result.each do |paths|
-  result_str += paths.size.to_s + ' '
+  result_str += ' ' + paths.size.to_s + ' '
 
   resss = []
   paths.sort_by{|el| [el.first[:color], el.first[:parent]]}.each do |el|
