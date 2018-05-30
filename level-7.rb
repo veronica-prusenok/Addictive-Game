@@ -54,9 +54,7 @@ def join_paths(num_of_paths, paths)
 end
 
 def apply_points(points, board)
-  points.each do |point|
-    board[point[0]][point[1]] = point[2]
-  end
+  points.each{ |point| board[point[0]][point[1]] = point[2] }
   board
 end
 
@@ -127,7 +125,7 @@ def is_connectively?(point1, point2, play_board, color)
     curr_node = node_queue.pop
 
     return true if board[curr_node[0]][curr_node[1]] == color && curr_node != point1
-    next if board[curr_node[0]][curr_node[1]] != ' ' && board[curr_node[0]][curr_node[1]] != color
+    next if board[curr_node[0]][curr_node[1]] == 0 && board[curr_node[0]][curr_node[1]] != color
 
     board[curr_node[0]][curr_node[1]] = 0
 
@@ -140,6 +138,7 @@ def is_connectively?(point1, point2, play_board, color)
 
     node_queue = children + node_queue
   end
+  false
 end
 
 def can_move(board, point, width, color, paths)
@@ -169,8 +168,7 @@ def move_by_points(point1, point2)
   return 'S' if point1 < point2
 end
 
-def apply_sure_moves(points_with_color, board, cols)
-  points_to_check = points_with_color.map{|point, color| [point,color,point]}
+def apply_sure_moves(points_to_check, board, cols, points_to_connect)
   points_to_check_dup = points_to_check
   paths = []
 
@@ -199,12 +197,14 @@ def apply_sure_moves(points_with_color, board, cols)
             if board[new_x][new_y] == ' '
               points_to_check_dup << [move, color, parent]
               board[new_x][new_y] = 'o'
+              points_to_connect[color] = points_to_connect[color] - [point] + [move]
             elsif board[new_x][new_y] == color
               if move < parent
                 cur_path[:parent] = move
                 cur_path[:move_to].reverse!
               end
               points_to_check_dup -= [[move, color, move]]
+              points_to_connect.delete(color)
             elsif board[new_x][new_y] == 'o'
               cross_path = paths.select{|path| path.first[:move_to].include?(move) && path.first[:parent] != parent}.first.first
               board[new_x][new_y] = 0 if board[new_x][new_y] == 'o'
@@ -216,6 +216,7 @@ def apply_sure_moves(points_with_color, board, cols)
                 paths -= [[cross_path]]
               end
               points_to_check_dup.each{|point_to_check| points_to_check_dup -= [point_to_check] if point_to_check.last == cross_path[:parent] || point_to_check.last == parent }
+              points_to_connect.delete(color)
             end
           end
           points_to_check = points_to_check_dup
@@ -230,12 +231,31 @@ def is_board_has_holes?(board)
   board.any?{|row| row.include?(' ')}
 end
 
-data = ''
-File.open('level7/level7-3.in').each do |line|
-  data << line
+def find_all_paths(play_board, points_to_try)
+  board = play_board.map(&:clone)
+  node_queue = [point1]
+
+  while(node_queue.size != 0)
+    curr_node = node_queue.pop
+
+    return true if board[curr_node[0]][curr_node[1]] == color && curr_node != point1
+    next if board[curr_node[0]][curr_node[1]] != ' ' && board[curr_node[0]][curr_node[1]] != color
+
+    board[curr_node[0]][curr_node[1]] = 0
+
+    children = []
+
+    children << [curr_node[0]-1, curr_node[1]] if curr_node[0]-1 >= 0
+    children << [curr_node[0]+1, curr_node[1]] if curr_node[0]+1 < rows
+    children << [curr_node[0], curr_node[1]-1] if curr_node[1]-1 >= 0
+    children << [curr_node[0], curr_node[1]+1] if curr_node[1]+1 < cols
+
+    node_queue = children + node_queue
+  end
 end
-data = data.split(" ")
-tests_num = data.slice!(0).to_i
+
+data = File.open('level7/level7-11.in').map{ |line| line.split(" ") }
+tests_num = data.flatten!.slice!(0).to_i
 rest = data
 result = Array.new(tests_num)
 tests = {}
@@ -256,14 +276,36 @@ tests.each_with_index do |(key,data),index|
   coords_with_color = calc_points_poz_with_color(data[:points_with_color], data[:cols])
   play_board = apply_points(coords_with_color, Array.new(data[:rows]){Array.new(data[:cols], ' ')})
   play_board = apply_paths(play_board, data[:joined_paths], data[:cols])
+  points_to_check = data[:points_with_color].map{|point, color| [point,color,point]}
+  points_to_connect = {}
+  points_to_check.each do |point, color, _|
+    points_to_connect[color] ? points_to_connect[color] << point : points_to_connect[color] = [point]
+  end
+  
+  paths = apply_sure_moves(points_to_check, play_board, data[:cols], points_to_connect)
 
-  paths = apply_sure_moves(data[:points_with_color], play_board, data[:cols])
-
-
-  p paths.size == data[:size]/2
-  p !is_board_has_holes?(play_board)
-  play_board.each do |str|
-    puts str.join(', ').gsub(',', '')
+  if !paths.size == data[:size]/2 || is_board_has_holes?(play_board)
+    play_board.each do |str|
+      puts str.join(', ').gsub(',', '')
+    end
+    
+    board = play_board.dup
+    
+    i=0
+    
+    while is_board_has_holes?(board) && i != 1
+      if paths.size != data[:size]/2
+        p paths
+        p tales = points_to_check + paths.map{ |path| [path.first[:move_to].last, path.first[:color], path.first[:parent]] } - paths.map{ |path| [path.first[:move_to].first, path.first[:color], path.first[:parent]] }
+        p '-'*20
+        
+        p possible_moves = tales.map{|tale| {tale[0] => can_move(board, tale[0], data[:cols], tale[1], paths)} }     
+        p points_to_connect
+        points_to_connect.each {|key, val| p is_connectively?(poz_of_point(val[0],data[:cols]),poz_of_point(val[1],data[:cols]),board,key) }
+      else
+      end
+      i+=1
+    end
   end
   result[index] = paths
 end
@@ -283,4 +325,4 @@ result.each do |paths|
   result_str += resss.join(', ').gsub(',', '')
 end
 
-p result_str
+# p result_str
